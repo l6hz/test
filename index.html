@@ -1,91 +1,169 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <!-- 微信卡片伪装成Word文档 -->
-    <meta property="og:title" content="书.docx">
-    <meta property="og:description" content="点击查看">
+    <meta property="og:title" content="给宝贝的检讨书.docx">
+    <meta property="og:description" content="亲爱的请点击查看">
     <meta property="og:image" content="https://zweb-cdn.oss-cn-hangzhou.aliyuncs.com/word-icon.png">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>检讨书</title>
     <style>
-        body, html { margin:0; padding:0; height:100%; overflow:hidden; background:#000; }
-        video {
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #1a1a2e;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+        }
+        canvas {
             position: fixed;
-            right: 0; bottom: 0;
-            min-width: 100%; min-height: 100%;
-            width: auto; height: auto;
-            z-index: -1;
-            object-fit: cover;
+            top: 0;
+            left: 0;
+            z-index: 1;
         }
-        #overlay {
-            position: fixed; top:0; left:0; width:100%; height:100%;
-            background: rgba(0,0,0,0.01);
+        .text-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             z-index: 10;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            font-size: 18px;
-            text-shadow: 0 0 10px rgba(0,0,0,0.7);
-            pointer-events: none;
-            animation: fadeOut 3s forwards;
+            text-align: center;
+            color: #fff;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 0 0 40px rgba(255, 105, 180, 0.6);
+            animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            opacity: 0;
         }
-        @keyframes fadeOut {
-            0% { opacity: 1; }
-            70% { opacity: 1; }
-            100% { opacity: 0; }
+        .text-box h1 {
+            font-size: 7vw;
+            font-weight: 900;
+            letter-spacing: 0.05em;
+            margin-bottom: 10px;
+            animation: float 3s ease-in-out infinite;
         }
-        #tapHint {
-            position: fixed; bottom:30px; left:50%; transform:translateX(-50%);
-            color: rgba(255,255,255,0.9);
-            background: rgba(0,0,0,0.5);
-            padding: 8px 20px;
-            border-radius: 20px;
-            font-size: 14px;
-            z-index: 20;
-            pointer-events: none;
+        .text-box .emoji {
+            font-size: 8vw;
+        }
+        @keyframes popIn {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.3);
+            }
+            100% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+        /* 小屏适配 */
+        @media (max-width: 600px) {
+            .text-box h1 {
+                font-size: 10vw;
+            }
+            .text-box .emoji {
+                font-size: 12vw;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- 把这里换成你自己的视频链接 -->
-    <video id="mainVideo" autoplay muted playsinline loop>
-        <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
-    </video>
-
-    <div id="overlay">正在为你播放…</div>
-    <div id="tapHint">🔊 点一下画面打开声音</div>
+    <canvas id="confettiCanvas"></canvas>
+    <div class="text-box">
+        <div class="emoji">🎉</div>
+        <h1>嘿嘿，你被骗啦</h1>
+        <div class="emoji">😜</div>
+    </div>
 
     <script>
-        const video = document.getElementById('mainVideo');
-        const overlay = document.getElementById('overlay');
-        const tapHint = document.getElementById('tapHint');
+        (function() {
+            const canvas = document.getElementById('confettiCanvas');
+            const ctx = canvas.getContext('2d');
+            let width, height;
+            let particles = [];
+            const colors = ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#ff922b', '#e599f7', '#20c997'];
 
-        // 点击视频取消静音并全屏（更好的观看体验）
-        video.addEventListener('click', function() {
-            if (video.muted) {
-                video.muted = false;
-                video.play();
-                tapHint.style.display = 'none';
-                if (video.requestFullscreen) {
-                    video.requestFullscreen();
-                } else if (video.webkitRequestFullscreen) {
-                    video.webkitRequestFullscreen();
+            function resizeCanvas() {
+                width = window.innerWidth;
+                height = window.innerHeight;
+                canvas.width = width;
+                canvas.height = height;
+            }
+
+            class Particle {
+                constructor() {
+                    this.reset();
+                    this.y = Math.random() * height - height; // 初始随机散布在屏幕上方
+                }
+                reset() {
+                    this.x = Math.random() * width;
+                    this.y = -20 - Math.random() * 200;
+                    this.size = Math.random() * 12 + 6;
+                    this.speedY = Math.random() * 3 + 2;
+                    this.speedX = (Math.random() - 0.5) * 1.5;
+                    this.rotation = Math.random() * 360;
+                    this.rotationSpeed = (Math.random() - 0.5) * 8;
+                    this.color = colors[Math.floor(Math.random() * colors.length)];
+                    this.shape = Math.random() > 0.5 ? 'rect' : 'circle'; // 方形或圆形纸屑
+                }
+                update() {
+                    this.y += this.speedY;
+                    this.x += this.speedX;
+                    this.rotation += this.rotationSpeed;
+                    if (this.y > height + 50 || this.x < -50 || this.x > width + 50) {
+                        this.reset();
+                        this.y = -50; // 重新从顶部掉落
+                    }
+                }
+                draw(ctx) {
+                    ctx.save();
+                    ctx.translate(this.x, this.y);
+                    ctx.rotate((this.rotation * Math.PI) / 180);
+                    ctx.fillStyle = this.color;
+                    if (this.shape === 'rect') {
+                        ctx.fillRect(-this.size / 2, -this.size / 4, this.size, this.size / 2);
+                    } else {
+                        ctx.beginPath();
+                        ctx.arc(0, 0, this.size / 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    ctx.restore();
                 }
             }
-        });
 
-        // 初始播放受阻时的备选（基本不会发生，静音允许自动播）
-        video.play().catch(() => {
-            overlay.innerHTML = '请轻触画面开始';
-            overlay.style.animation = 'none';
-            overlay.style.opacity = '1';
-            overlay.style.pointerEvents = 'auto';
-            overlay.addEventListener('click', () => {
-                video.muted = false;
-                video.play();
-                overlay.style.display = 'none';
+            function initParticles(count = 150) {
+                particles = [];
+                for (let i = 0; i < count; i++) {
+                    particles.push(new Particle());
+                }
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, width, height);
+                for (let p of particles) {
+                    p.update();
+                    p.draw(ctx);
+                }
+                requestAnimationFrame(animate);
+            }
+
+            window.addEventListener('resize', () => {
+                resizeCanvas();
+                // 不需要重置粒子，它们会自适应
             });
-        });
+
+            resizeCanvas();
+            initParticles(180);
+            animate();
+        })();
     </script>
 </body>
 </html>
